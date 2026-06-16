@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ladakh Hilux 4x4 - 20 Mission Campaign</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0c1220;
+      font-family: Arial, sans-serif;
+      touch-action: none;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    
+    /* MAIN MENU / MISSION ENTRY GATE */
+    #start-screen, #victory-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    #victory-screen { display: none; background: linear-gradient(135deg, #15803d 0%, #14532d 100%); }
+    
+    .menu-title { font-family: 'Impact', sans-serif; font-size: 38px; color: #eab308; letter-spacing: 1px; margin-bottom: 10px; }
+    .mission-status { font-size: 18px; color: #38bdf8; margin-bottom: 25px; font-weight: bold; text-transform: uppercase; }
+    
+    .start-btn {
+      padding: 16px 45px; background: #eab308; color: #0f172a;
+      font-size: 20px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+
+    /* ULTRA-SLIM UPGRADED DATA HUD */
+    #hud {
+      position: absolute;
+      top: 0; left: 0; width: 100%;
+      background: rgba(15, 23, 42, 0.85);
+      padding: 6px 12px;
+      color: #ffffff;
+      pointer-events: none;
+      z-index: 10;
+      font-family: monospace;
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #eab308;
+    }
+    .stat-val { color: #38bdf8; font-weight: bold; }
+    .mission-val { color: #eab308; font-weight: bold; }
+    #terrain-txt { color: #f43f5e; font-weight: bold; }
+
+    /* SIGNPOST DIALOGUE BULLETINS */
+    #bro-sign {
+      position: absolute;
+      top: 32px; right: 10px;
+      background: rgba(234, 179, 8, 0.95); color: #000;
+      padding: 4px 10px; font-size: 10px; font-weight: bold;
+      border-radius: 3px; border: 1px dashed #000;
+      max-width: 220px; text-align: center; z-index: 10;
+    }
+
+    /* MOBILE INTERFACE OVERLAY DECK */
+    #mobile-interface {
+      display: none;
+      position: absolute;
+      bottom: 0; left: 0; width: 100%; height: 160px;
+      pointer-events: none;
+      z-index: 20;
+    }
+    
+    /* CALIBRATED STEERING WHEEL CONTAINER */
+    #wheel-container {
+      position: absolute;
+      bottom: 20px; left: 20px;
+      width: 120px; height: 120px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 50%;
+      pointer-events: auto;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #steering-wheel {
+      width: 110px; height: 110px;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="%234b5563" stroke-width="9" fill="none"/><circle cx="50" cy="50" r="39" stroke="%23111827" stroke-width="2" fill="none"/><circle cx="50" cy="50" r="13" fill="%231f2937"/><line x1="50" y1="9" x2="50" y2="36" stroke="%234b5563" stroke-width="7"/><line x1="13" y1="50" x2="36" y2="50" stroke="%234b5563" stroke-width="7"/><line x1="64" y1="50" x2="87" y2="50" stroke="%234b5563" stroke-width="7"/></svg>');
+      background-size: contain;
+      transition: transform 0.04s linear;
+    }
+
+    /* ERGONOMIC RACING PEDALS */
+    #pedals-container {
+      position: absolute;
+      bottom: 20px; right: 20px;
+      display: flex; gap: 15px;
+      pointer-events: auto;
+    }
+    .pedal {
+      width: 55px; height: 100px;
+      background: #1f2937;
+      border: 3px solid #4b5563;
+      border-radius: 6px;
+      color: #9ca3af;
+      font-weight: bold; font-size: 20px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .pedal:active { background: #374151; border-color: #eab308; color: #fff; }
+    .pedal-gas { height: 120px; background: #111827; border-color: #374151; }
+
+    /* CORE ACTION DECK HUD */
+    #dash-ui {
+      position: absolute;
+      bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 8px; z-index: 30;
+    }
+    .dash-btn {
+      padding: 8px 14px; background: #0f172a; border: 1px solid #eab308;
+      color: #fff; font-size: 10px; font-weight: bold; border-radius: 3px; cursor: pointer;
+    }
+
+    @media (max-pointer-case: coarse), (max-width: 900px) {
+      #mobile-interface { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="start-screen">
+    <h1 class="menu-title" id="menu-headline">HILUX CAMPAIGN DRIVE</h1>
+    <p class="mission-status" id="menu-subline">MISSION 1: WELCOME TO THE PASS</p>
+    <button class="start-btn" id="action-btn" onclick="startGame()">START MISSION</button>
+  </div>
+
+  <div id="victory-screen">
+    <h1 class="menu-title" style="color: #fff;">MISSION ACCOMPLISHED!</h1>
+    <p class="mission-status" id="victory-details" style="color: #eab308;">LEVEL 1 COMPLETED SUCCESSFULLY</p>
+    <button class="start-btn" style="background:#fff; color:#14532d;" onclick="nextLevelReady()">NEXT MISSION ➔</button>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="hud">
+    <div>MISSION: <span id="lvl-txt" class="mission-val">1 / 20</span></div>
+    <div>ROUTE: <span id="terrain-txt">EASY HIGHWAY</span></div>
+    <div>GEAR: <span id="gear-txt" class="stat-val">DRIVE (D)</span></div>
+    <div>SPEED: <span id="speed-txt" class="stat-val">0</span> KM/H</div>
+    <div>GOAL: <span id="goal-txt" class="mission-val">0 / 400</span> M</div>
+  </div>
+
+  <div id="bro-sign">
+    <span id="sign-text">"IF YOU ARE MARRIED, DIVORCE SPEED!"</span>
+  </div>
+
+  <div id="dash-ui">
+    <button class="dash-btn" onclick="toggleCamera()">🎥 VIEW CAM</button>
+    <button class="dash-btn" onclick="playCustomHorn()">🎵 AIR HORN</button>
+    <button class="dash-btn" onclick="cycleRadio()">📻 TRUCK FM</button>
+  </div>
+
+  <div id="mobile-interface">
+    <div id="wheel-container">
+      <div id="steering-wheel"></div>
+    </div>
+    
+    <div id="pedals-container">
+      <div class="pedal pedal-brake" id="pad-brake">B</div>
+      <div class="pedal pedal-gas" id="pad-gas">A</div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let audioCtx = null;
+    let radioNode = null; 
+    let currentRadioTrack = 0;
+    let hornActiveTimer = 0;
+
+    // MISSION CAMPAIGN DATA STATE SYSTEM
+    let currentLevel = 1;
+    const MAX_LEVELS = 20;
+    let levelProgressDistance = 0;
+    const LEVEL_TARGET_DISTANCE = 400; // Drive 400m to clear each stage!
+    let gameActiveState = false;
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function playCustomHorn() {
+      try {
+        initAudio(); if (!audioCtx) return;
+        hornActiveTimer = 30;
+        let now = audioCtx.currentTime;
+        let gainNode = audioCtx.createGain();
+        gainNode.connect(audioCtx.destination);
+        gainNode.gain.setValueAtTime(0.70, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+        
+        let sequence = [{f:392,s:0,d:0.1}, {f:440,s:0.1,d:0.1}, {f:523,s:0.2,d:0.15}, {f:440,s:0.4,d:0.1}, {f:523,s:0.5,d:0.25}];
+        sequence.forEach(note => {
+          let osc = audioCtx.createOscillator(); osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(note.f, now + note.s); osc.connect(gainNode);
+          osc.start(now + note.s); osc.stop(now + note.s + note.d);
+        });
+      } catch(e){}
+    }
+
+    function cycleRadio() {
+      initAudio(); if (!audioCtx) return;
+      if (radioNode) { radioNode.stop(); radioNode = null; }
+      currentRadioTrack = (currentRadioTrack + 1) % 3;
+      if (currentRadioTrack === 0) return;
+
+      radioNode = audioCtx.createOscillator();
+      let radioGain = audioCtx.createGain();
+      radioNode.type = currentRadioTrack === 1 ? 'triangle' : 'sawtooth';
+      radioNode.frequency.setValueAtTime(currentRadioTrack === 1 ? 65 : 55, audioCtx.currentTime);
+      
+      let mod = audioCtx.createOscillator(); let modGain = audioCtx.createGain();
+      mod.frequency.value = currentRadioTrack === 1 ? 5.5 : 4.2; modGain.gain.value = 22;
+      mod.connect(modGain); modGain.connect(radioNode.frequency);
+      
+      radioGain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      radioNode.connect(radioGain); radioGain.connect(audioCtx.destination);
+      mod.start(); radioNode.start();
+    }
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // ENGINE PARAMETERS
+    const CAMERA_DEPTH = 0.85; 
+    const SEGMENT_LENGTH = 200; 
+    const RUMBLE_LENGTH = 3; 
+    const TRACK_LENGTH = 8000; 
+    const ROAD_WIDTH = 2200; 
+
+    let segments = [];
+    let position = 0; 
+    let playerX = 0;  
+    let speed = 0;
+    let maxSpeed = 150; 
+    let maxReverseSpeed = -45;
+    let accel = 2.5;
+    let braking = 8.0;
+    let decel = 1.2;
+    let steeringWheelRotation = 0;
+    let isThirdPerson = true;
+
+    const broSayings = [
+      "IF YOU ARE MARRIED, DIVORCE SPEED!",
+      "DARLING I LIKE YOU, BUT NOT SO FAST.",
+      "BE GENTLE ON MY CURVES!",
+      "EXPERIENCED DRIVERS FILL LIVES, NOT CEMETERIES!"
+    ];
+    
+    const keys = { KeyW: false, KeyA: false, KeyS: false, KeyD: false };
+
+    window.addEventListener('keydown', (e) => { if (e.code in keys) keys[e.code] = true; });
+    window.addEventListener('keyup', (e) => { if (e.code in keys) keys[e.code] = false; });
+
+    // MOBILE INPUT CONTROLLERS INTERACTIVE MECHANICS
+    const wheelContainer = document.getElementById('wheel-container');
+    const wheelImg = document.getElementById('steering-wheel');
+    let isSteering = false;
+    let wheelTouchStartX = 0;
+    let activeWheelAngle = 0;
+
+    wheelContainer.addEventListener('touchstart', (e) => {
+      isSteering = true;
+      wheelTouchStartX = e.touches[0].clientX;
+    }, {passive: true});
+
+    window.addEventListener('touchmove', (e) => {
+      if (!isSteering) return;
+      let deltaX = e.touches[0].clientX - wheelTouchStartX;
+      activeWheelAngle = Math.max(Math.min(deltaX * 1.3, 140), -140);
+      wheelImg.style.transform = `rotate(${activeWheelAngle}deg)`;
+      steeringWheelRotation = activeWheelAngle / 100;
+    }, {passive: true});
+
+    window.addEventListener('touchend', () => {
+      if (isSteering) {
+        isSteering = false;
+        activeWheelAngle = 0;
+        wheelImg.style.transform = 'rotate(0deg)';
+        steeringWheelRotation = 0;
+      }
+    });
+
+    const gasPedal = document.getElementById('pad-gas');
+    const brakePedal = document.getElementById('pad-brake');
+    
+    gasPedal.addEventListener('touchstart', (e) => { e.preventDefault(); keys.KeyW = true; });
+    gasPedal.addEventListener('touchend', (e) => { e.preventDefault(); keys.KeyW = false; });
+    brakePedal.addEventListener('touchstart', (e) => { e.preventDefault(); keys.KeyS = true; });
+    brakePedal.addEventListener('touchend', (e) => { e.preventDefault(); keys.KeyS = false; });
+
+    function toggleCamera() { isThirdPerson = !isThirdPerson; }
+    
+    function startGame() { 
+      document.getElementById('start-screen').style.display = 'none'; 
+      initAudio();
+      levelProgressDistance = 0;
+      position = 0;
+      playerX = 0;
+      speed = 0;
+      buildCampaignTrack();
+      gameActiveState = true;
+    }
+
+    function levelCompletedGateTrigger() {
+      gameActiveState = false;
+      keys.KeyW = false; keys.KeyS = false;
+      if (currentLevel >= MAX_LEVELS) {
+        document.getElementById('victory-details').innerText = "YOU HAVE CONQUERED ALL 20 HILUX MISSIONS!";
+        document.getElementById('victory-screen').style.display = 'flex';
+      } else {
+        document.getElementById('victory-details').innerText = `MISSION ${currentLevel} COMPLETED IMPRESSIVELY!`;
+        document.getElementById('victory-screen').style.display = 'flex';
+      }
+    }
+
+    function nextLevelReady() {
+      document.getElementById('victory-screen').style.display = 'none';
+      if (currentLevel < MAX_LEVELS) {
+        currentLevel++;
+        document.getElementById('menu-headline').innerText = `MISSION ${currentLevel} ENTRY`;
+        if (currentLevel <= 5) document.getElementById('menu-subline').innerText = `PROGRESSED ASPHALT CLIMB`;
+        else if (currentLevel <= 12) document.getElementById('menu-subline').innerText = `MUDDY PASS EXPEDITION`;
+        else document.getElementById('menu-subline').innerText = `EXTREME BOULDER HAZARDS`;
+        
+        document.getElementById('action-btn').innerText = "REV ENGINE & CONTINUE";
+        document.getElementById('start-screen').style.display = 'flex';
+      } else {
+        currentLevel = 1;
+        location.reload();
+      }
+    }
+
+    // CAMPAIGN TRACK DESIGN GENERATOR DEPENDING ON LIVE GAME LEVEL
+    function buildCampaignTrack() {
+      segments = [];
+      let levelType = 'asphalt';
+      
+      if (currentLevel <= 5) levelType = 'asphalt';
+      else if (currentLevel <= 12) levelType = 'mud';
+      else levelType = 'landslide';
+
+      // Scaling curve & hill parameters with respect to active mission index multiplier
+      let curveIntensityFactor = currentLevel * 0.35;
+      let hillIntensityFactor = currentLevel * 6.5;
+
+      for (let i = 0; i < TRACK_LENGTH; i++) {
+        let curve = 0; let hill = 0;
+        
+        if (levelType === 'asphalt') {
+          if (i > 100 && i % 300 < 60) curve = 1.5 + curveIntensityFactor;
+          hill = Math.sin(i / 15) * hillIntensityFactor;
+        } else if (levelType === 'mud') {
+          curve = Math.sin(i / 80) * (2.0 + curveIntensityFactor);
+          hill = Math.cos(i / 30) * (30 + hillIntensityFactor);
+        } else {
+          // Extreme hard landslide setups
+          if (i % 200 < 80) curve = (i % 400 < 200) ? 3.5 + curveIntensityFactor : -(3.5 + curveIntensityFactor);
+          hill = Math.sin(i / 20) * (50 + hillIntensityFactor);
+        }
+
+        let object = null;
+        if (i > 40) {
+          let spawnChance = Math.random();
+          // Level scaled boulder hazards injection code structure
+          if (levelType === 'landslide' && spawnChance > 0.90) {
+            object = { type: 'boulder', x: (Math.random() * 1.5) - 0.75, size: 140 };
+          } else if (spawnChance > 0.85) {
+            object = { type: 'mountain_tree', x: Math.random() > 0.5 ? 1.6 : -1.6, size: 110 };
+          }
+        }
+
+        segments.push({ index: i, p1: { world: { x: 0, y: hill, z: i * SEGMENT_LENGTH }, screen: { x: 0, y: 0, w: 0 } }, p2: { world: { x: 0, y: hill, z: (i + 1) * SEGMENT_LENGTH }, screen: { x: 0, y: 0, w: 0 } }, curve: curve, object: object, terrain: levelType });
+      }
+    }
+
+    function project3D(p, cameraX, cameraY, cameraZ) {
+      let transX = p.world.x - cameraX; let transY = p.world.y - cameraY; let transZ = p.world.z - cameraZ;
+      if (transZ <= 0) return;
+      let scale = CAMERA_DEPTH / transZ;
+      p.screen.x = Math.round((canvas.width / 2) + (scale * transX * canvas.width / 2));
+      p.screen.y = Math.round((canvas.height / 2) - (scale * transY * canvas.height / 2));
+      p.screen.w = Math.round(scale * ROAD_WIDTH * canvas.width / 2);
+    }
+
+    function updatePhysics() {
+      if (!gameActiveState) return;
+
+      let startPos = Math.floor(position / SEGMENT_LENGTH);
+      let activeSeg = segments[startPos % TRACK_LENGTH];
+      let dragModifier = activeSeg.terrain === 'mud' ? 0.60 : 1.0;
+      
+      document.getElementById('terrain-txt').innerText = activeSeg.terrain.toUpperCase() + (currentLevel > 12 ? " DANGER!" : "");
+
+      if (keys.KeyW) {
+        if (speed < 0) speed = Math.min(speed + braking, 0);
+        else speed = Math.min(speed + (accel * dragModifier), maxSpeed);
+      } else if (keys.KeyS) {
+        if (speed > 0) speed = Math.max(speed - braking, 0);
+        else speed = Math.max(speed - (accel * 0.5), maxReverseSpeed);
+      } else {
+        if (speed > 0) speed = Math.max(speed - decel, 0);
+        else if (speed < 0) speed = Math.min(speed + decel, 0);
+      }
+
+      document.getElementById('gear-txt').innerText = speed > 0 ? "DRIVE (D)" : speed < 0 ? "REVERSE (R)" : "NEUTRAL (N)";
+
+      if (Math.abs(speed) > 2) {
+        let speedRatio = Math.abs(speed) / maxSpeed;
+        if (!isSteering) {
+          if (keys.KeyA) { playerX -= 0.052 * speedRatio; steeringWheelRotation = -0.8; }
+          else if (keys.KeyD) { playerX += 0.052 * speedRatio; steeringWheelRotation = 0.8; }
+          else { steeringWheelRotation = 0; }
+        } else {
+          playerX += (steeringWheelRotation * 0.065) * speedRatio;
+        }
+      }
+
+      // Boulder crash mechanics penalty system code
+      if (activeSeg.object && activeSeg.object.type === 'boulder' && Math.abs(playerX - activeSeg.object.x) < 0.4) {
+        if (speed > 30) { speed = 10; hornActiveTimer = 15; } // Crash bounce drag impact
+      }
+
+      if ((playerX < -0.85 || playerX > 1.35) && speed > 35) speed -= 3.0;
+
+      position += speed;
+      if (position >= TRACK_LENGTH * SEGMENT_LENGTH) position -= TRACK_LENGTH * SEGMENT_LENGTH;
+      if (position < 0) position += TRACK_LENGTH * SEGMENT_LENGTH;
+
+      // TRACK LIVE MISSION ACCUMULATED DRIVE METER VALUES
+      if (speed > 5) {
+        levelProgressDistance += (speed * 0.0035);
+        if (levelProgressDistance >= LEVEL_TARGET_DISTANCE) {
+          levelCompletedGateTrigger();
+        }
+      }
+
+      if (Math.floor(position / 12000) % broSayings.length === 0 && speed > 5 && position % 12000 < speed) {
+        document.getElementById('sign-text').innerText = `"${broSayings[Math.floor(Math.random() * broSayings.length)]}"`;
+      }
+    }
+
+    function drawViewport() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let startPos = Math.floor(position / SEGMENT_LENGTH);
+      let currentSegment = segments[startPos % TRACK_LENGTH];
+      let playerPercent = (position % SEGMENT_LENGTH) / SEGMENT_LENGTH;
+
+      // Dynamic Sky background hue changing relative to terrain category selection
+      ctx.fillStyle = currentSegment.terrain === 'mud' ? '#1f2937' : currentSegment.terrain === 'landslide' ? '#2e1065' : '#4ba3e3'; 
+      ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
+      
+      ctx.fillStyle = '#854d0e'; ctx.beginPath(); ctx.moveTo(0, canvas.height / 2);
+      for(let i = 0; i <= canvas.width; i += 60) ctx.lineTo(i, (canvas.height / 2) - 50 - Math.sin(i * 0.005) * 70);
+      ctx.lineTo(canvas.width, canvas.height / 2); ctx.fill();
+      ctx.fillStyle = '#a16207'; ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+      
+      let xOffset = 0; let dx = -(currentSegment.curve * playerPercent);
+      let camHeight = isThirdPerson ? 1200 : 860;
+      let targetZOffset = isThirdPerson ? 200 : 0; // Tight structural follow offset value
+
+      for (let i = 0; i < 120; i++) {
+        let seg = segments[(startPos + i) % TRACK_LENGTH];
+        let loopWrap = ((startPos + i) >= TRACK_LENGTH) ? TRACK_LENGTH * SEGMENT_LENGTH : 0;
+        project3D(seg.p1, playerX * ROAD_WIDTH - xOffset, camHeight, position - loopWrap - targetZOffset);
+        project3D(seg.p2, playerX * ROAD_WIDTH - xOffset - dx, camHeight, position - loopWrap - targetZOffset);
+        xOffset += dx; dx += seg.curve;
+
+        if (seg.p1.screen.y >= canvas.height || seg.p2.screen.y >= seg.p1.screen.y || seg.p2.screen.y < 0) continue;
+        let p1 = seg.p1.screen; let p2 = seg.p2.screen;
+        ctx.fillStyle = seg.terrain === 'mud' ? '#78350f' : seg.terrain === 'landslide' ? '#451a03' : '#334155';
+        ctx.beginPath(); ctx.moveTo(p1.x - p1.w, p1.y); ctx.lineTo(p2.x - p2.w, p2.y); ctx.lineTo(p2.x + p2.w, p2.y); ctx.lineTo(p1.x + p1.w, p1.y); ctx.fill();
+        
+        // Rumble strips color matrix layouts
+        ctx.fillStyle = (Math.floor(seg.index / RUMBLE_LENGTH) % 2) ? '#eab308' : '#ffffff';
+        ctx.fillRect(p1.x - p1.w, p1.y, p1.w * 0.04, p2.y - p1.y + 1);
+        ctx.fillRect(p1.x + p1.w * 0.96, p1.y, p1.w * 0.04, p2.y - p1.y + 1);
+      }
+
+      // SPRITES BILLBOARDS HAZARD RENDER STAGE
+      for (let i = 120; i > 0; i--) {
+        let seg = segments[(startPos + i) % TRACK_LENGTH];
+        if (seg.object) {
+          let zDist = seg.p1.world.z - position + ((startPos + i >= TRACK_LENGTH) ? TRACK_LENGTH * SEGMENT_LENGTH : 0) + targetZOffset;
+          let scale = CAMERA_DEPTH / zDist;
+          if (scale > 0) {
+            let objX = Math.round(seg.p1.screen.x + (scale * (seg.object.x - playerX) * ROAD_WIDTH * canvas.width / 2));
+            let objY = seg.p1.screen.y; let objW = Math.round(scale * seg.object.size * canvas.width / 2);
+            if (objX > -objW && objX < canvas.width + objW && zDist > 0) {
+              if (seg.object.type === 'boulder') {
+                ctx.fillStyle = '#4b5563'; ctx.beginPath(); ctx.arc(objX, objY - objW * 0.4, objW * 0.5, 0, Math.PI, true); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = '#1f2937'; ctx.fillRect(objX - objW * 0.4, objY - objW * 0.3, objW * 0.8, objW * 0.3);
+              } else {
+                ctx.fillStyle = '#15803d'; ctx.beginPath(); ctx.moveTo(objX, objY - objW * 1.2); ctx.lineTo(objX - objW * 0.35, objY); ctx.lineTo(objX + objW * 0.35, objY); ctx.fill();
+              }
+            }
+          }
+        }
+      }
+
+      // CRITICAL FIXED SPECIFIC ACCURATE HIGH-FIDELITY TOYOTA HILUX PICKUP TRUCK CANVAS DRAW MODEL
+      if (!isThirdPerson) { 
+        let dashTop = canvas.height * 0.75;
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(0, dashTop, canvas.width, canvas.height - dashTop);
+        ctx.fillStyle = '#334155'; ctx.fillRect(canvas.width * 0.25, dashTop + 10, canvas.width * 0.5, 60);
+      } else {
+        // COMPENSATED VERTICAL MATH POSITION ENSURES HIGHLY VISIBLE RESPONSIVE TRUCK ACROSS ALL SMARTPHONE DEVICE WRAPS
+        let carX = canvas.width / 2; 
+        let carY = canvas.height - 110; // Placed noticeably higher so phone fingers or bottom layouts never obstruct view!
+        
+        ctx.save(); ctx.translate(carX, carY); ctx.rotate(steeringWheelRotation * 0.15);
+        
+        // Rugged 4x4 Offroad Deep Tire treads blocks
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(-55, 10, 16, 28); ctx.fillRect(39, 10, 16, 28);   // Rear Main drive line tires
+        ctx.fillRect(-52, -35, 14, 24); ctx.fillRect(38, -35, 14, 24); // Front steering wheels assembly
+
+        // Rugged Solid Box Steel Mudflaps/Chassis guards base
+        ctx.fillStyle = '#374151'; ctx.fillRect(-48, -5, 96, 12);
+
+        // Genuine Toyota Hilux Rear Trunk Bed Frame Cargo Box unit
+        ctx.fillStyle = '#e2e8f0'; ctx.fillRect(-46, -38, 92, 44); 
+        ctx.fillStyle = '#475569'; ctx.fillRect(-40, -14, 80, 18); // Internal cargo liner space compartment box
+        
+        // Premium Heavy Chrome Polish Utility Sports Safety Cage Rollbar tube structures
+        ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 4;
+        ctx.strokeRect(-38, -26, 12, 18); ctx.strokeRect(26, -26, 12, 18);
+
+        // Main Passenger Cab roof enclosure capsule
+        ctx.fillStyle = '#f1f5f9'; ctx.fillRect(-40, -64, 80, 26);
+        ctx.fillStyle = '#0f172a'; ctx.fillRect(-32, -58, 64, 14); // Dark privacy rear window screen shield glass
+
+        // Smart Adaptive Back Filaments Taillights unit modules arrays switching logic
+        if (speed < 0) {
+          ctx.fillStyle = '#ffffff'; // White high power backing lights beam matrix
+          ctx.fillRect(-44, 4, 12, 6); ctx.fillRect(32, 4, 12, 6);
+        } else {
+          ctx.fillStyle = keys.KeyS ? '#ef4444' : '#991b1b'; // Deep Crimson versus high glowing braking scarlet diodes array
+          ctx.fillRect(-44, 4, 12, 6); ctx.fillRect(32, 4, 12, 6);
+        }
+
+        ctx.restore();
+      }
+
+      // Visual Alert for Crash/Horn Alerts
+      if (hornActiveTimer > 0) {
+        ctx.fillStyle = '#eab308'; ctx.font = 'bold 24px Impact'; ctx.textAlign = 'center';
+        ctx.fillText("🔊 HORN ACTIVE!", canvas.width / 2, canvas.height * 0.25);
+        ctx.textAlign = 'left';
+      }
+
+      document.getElementById('speed-txt').innerText = Math.abs(Math.floor(speed));
+      document.getElementById('lvl-txt').innerText = `${currentLevel} / 20`;
+      document.getElementById('goal-txt').innerText = `${Math.floor(levelProgressDistance)} / ${LEVEL_TARGET_DISTANCE}`;
+    }
+
+    function engineLoop() { updatePhysics(); drawViewport(); requestAnimationFrame(engineLoop); }
+    buildCampaignTrack(); engineLoop();
+  </script>
+</body>
+</html>
